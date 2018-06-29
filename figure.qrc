@@ -1,0 +1,17 @@
+<RCC>
+    <qresource prefix="/figure">
+        <file>res/halfopen.png</file>
+        <file>res/open.png</file>
+        <file>res/close.png</file>
+        <file>res/passengerin.png</file>
+        <file>res/passengerout.png</file>
+        <file>res/building.png</file>
+        <file>res/icon.png</file>
+        <file>res/continue.png</file>
+        <file>res/end.png</file>
+        <file>res/pause.png</file>
+    </qresource>
+    <qresource prefix="/data">
+        <file>data/passengers.csv</file>
+    </qresource>
+</RCC>
