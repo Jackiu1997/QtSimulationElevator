@@ -58,6 +58,7 @@ private:
 
     /* UI控制模块 */
     //------------------------------------------------------------------------------------
+    void updateMessage();
     void paintEvent(QPaintEvent *event);
     void drawElevator(QPainter &painter);                           // 绘制电梯模块
     void drawPassenger(QPainter &painter);                          // 绘制乘客模块

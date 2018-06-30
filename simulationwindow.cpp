@@ -25,7 +25,7 @@ SimulationWindow::SimulationWindow(QWidget *parent) :
     this->setWindowTitle("Simulation Elevator");
     this->setWindowIcon(QIcon(":/figure/res/icon.png"));
     this->setAttribute(Qt::WA_StyledBackground,true);
-    this->setStyleSheet("background-color: rgb(255,255, 255)");
+    this->setStyleSheet("background-color: rgb(255, 255, 255)");
 
     ui->startButton->setIcon(continueIco);
     ui->endButton->setIcon(endIco);
@@ -33,19 +33,40 @@ SimulationWindow::SimulationWindow(QWidget *parent) :
     /* 初始化系统参数 */
     SystemTime = 0;
     buttonOption = false;
-    /* 初始化电梯信息参数 */
-    for (int eleNo = 1; eleNo <= 3; eleNo++) {
-        eleMessage[eleNo - 1] = simulationSystem.getElevatorMessage(eleNo);
-    }
-    /* 初始化楼层乘客参数 */
-    for (int floorNo = 1; floorNo <= 10; floorNo++) {
-        floorPassenger[floorNo - 1] = simulationSystem.getFloorPassengerNum(floorNo);
-    }
+    updateMessage();
+}
+
+/* 单步运行电梯系统 */
+void SimulationWindow::addSystemTime()
+{
+    simulationSystem.stepRunElevator();
+
+    /* 更新UI参数 */
+    updateMessage();
+
+    /* 系统时钟自增 */
+    Sleep(100);
+    SystemTime++;
+
+    /* 视图更新 */
+    update();
 }
 
 SimulationWindow::~SimulationWindow()
 {
     delete ui;
+}
+
+/* 更新UI参数 */
+void SimulationWindow::updateMessage() {
+    /* 更新电梯信息参数 */
+    for (int eleNo = 1; eleNo <= 3; eleNo++) {
+        eleMessage[eleNo - 1] = simulationSystem.getElevatorMessage(eleNo);
+    }
+    /* 更新楼层乘客参数 */
+    for (int floorNo = 1; floorNo <= 10; floorNo++) {
+        floorPassenger[floorNo - 1] = simulationSystem.getFloorPassengerNum(floorNo);
+    }
 }
 
 void SimulationWindow::paintEvent(QPaintEvent *event) {
@@ -83,28 +104,6 @@ void SimulationWindow::paintEvent(QPaintEvent *event) {
     if (buttonOption) {
         addSystemTime();
     }
-}
-
-/* 单步运行电梯系统 */
-void SimulationWindow::addSystemTime()
-{  
-    simulationSystem.stepRunElevator();
-
-    /* 更新电梯信息参数 */
-    for (int eleNo = 1; eleNo <= 3; eleNo++) {
-        eleMessage[eleNo - 1] = simulationSystem.getElevatorMessage(eleNo);
-    }
-    /* 更新楼层乘客参数 */
-    for (int floorNo = 1; floorNo <= 10; floorNo++) {
-        floorPassenger[floorNo - 1] = simulationSystem.getFloorPassengerNum(floorNo);
-    }
-
-    /* 系统时钟自增 */
-    Sleep(100);
-    SystemTime++;
-
-    /* 视图更新 */
-    update();
 }
 
 void SimulationWindow::drawElevator(QPainter &painter)
@@ -162,7 +161,7 @@ void SimulationWindow::drawPassenger(QPainter &painter) {
 }
 
 QRect SimulationWindow::getEleFloorRect(int eleNo, float nowFloor) {
-    return QRect(elevatorWidth * (eleNo), elevatorHigh * (10 - nowFloor), elevatorWidth - 3, elevatorHigh - 3);
+    return QRect(elevatorWidth * (eleNo), elevatorHigh * (10 - nowFloor), elevatorWidth - 5, elevatorHigh - 5);
 }
 
 QRect SimulationWindow::getPassengerRect(int eleNo, float nowFloor, int timer) {

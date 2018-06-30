@@ -59,7 +59,7 @@ struct Elevator {
 /* 电梯信息结构题 */
 //--------------------------------------------------------------
 struct ElevatorMessage {
-	int nowFloor;
+    float nowFloor;
     int nowLoad;
 
     Command runStatus;
