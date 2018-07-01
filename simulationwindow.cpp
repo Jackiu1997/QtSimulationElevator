@@ -45,7 +45,7 @@ void SimulationWindow::addSystemTime()
     updateMessage();
 
     /* 系统时钟自增 */
-    Sleep(100);
+    Sleep(200);
     SystemTime++;
 
     /* 视图更新 */
@@ -106,6 +106,7 @@ void SimulationWindow::paintEvent(QPaintEvent *event) {
     }
 }
 
+/* 绘制电梯状态 */
 void SimulationWindow::drawElevator(QPainter &painter)
 {
     for (int eleNo = 0; eleNo < 3; eleNo++) {
@@ -141,6 +142,7 @@ void SimulationWindow::drawElevator(QPainter &painter)
     }
 }
 
+/* 绘制乘客状态 */
 void SimulationWindow::drawPassenger(QPainter &painter) {
     for (int eleNo = 0; eleNo < 3; eleNo++) {
         ElevatorMessage message = eleMessage[eleNo];
@@ -160,10 +162,12 @@ void SimulationWindow::drawPassenger(QPainter &painter) {
     }
 }
 
+/* 获取电梯绘制位置 */
 QRect SimulationWindow::getEleFloorRect(int eleNo, float nowFloor) {
     return QRect(elevatorWidth * (eleNo), elevatorHigh * (10 - nowFloor), elevatorWidth - 5, elevatorHigh - 5);
 }
 
+/* 获取乘客绘制位置 */
 QRect SimulationWindow::getPassengerRect(int eleNo, float nowFloor, int timer) {
     int top = 0, left = 0;
     QRect eleRect = getEleFloorRect(eleNo, nowFloor);
@@ -172,13 +176,14 @@ QRect SimulationWindow::getPassengerRect(int eleNo, float nowFloor, int timer) {
     top = eleRect.top() + 30;
 
     switch (timer) {
-    case 0: return QRect(left, top, 50, 50);
-    case 1: return QRect(4*elevatorWidth + 10, top, 50, 50);
-    case 2: return QRect(4*elevatorWidth + 50, top, 50, 50);
+    case 0: return QRect(left, top, 45, 50);
+    case 1: return QRect(4*elevatorWidth + 10, top, 45, 50);
+    case 2: return QRect(4*elevatorWidth + 50, top, 45, 50);
     default: return QRect(left, top, 50, 50);
     }
 }
 
+/* UI继续控制按钮 */
 void SimulationWindow::on_startButton_clicked()
 {
     buttonOption = !buttonOption;
@@ -188,9 +193,9 @@ void SimulationWindow::on_startButton_clicked()
     else {
         ui->startButton->setIcon(continueIco);
     }
-    update();
 }
 
+/* UI结束控制按钮 */
 void SimulationWindow::on_endButton_clicked()
 {
     this->close();

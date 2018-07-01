@@ -90,31 +90,42 @@ int ElevatorSystem::getFloorPassengerNum(int floorNo) {
 void ElevatorSystem::addPassenger(int no, int time, int src, int tar)
 {
     PassengerList *cur = outFloorPeople[src - 1];
-    for (; cur->next != nullptr; cur = cur->next) {
-        if (cur->next->peoNo == no) return;
-    }
-    cur->next = new PassengerList(no, time, src, tar);
+	for (; cur->next != nullptr; cur = cur->next) {
+		/* 乘客存在，不加入 */
+		if (cur->next->peoNo == no) {
+			return;
+		}
+		/* 乘客按时间顺序插入 */
+		else if (cur->next->requestTime > time) {
+			auto *newNode = new PassengerList(no, time, src, tar);
+			newNode->next = cur->next;
+			cur->next = newNode;
+			return;
+		}
+	}
+	/* 插入楼层乘客尾部 */
+	cur->next = new PassengerList(no, time, src, tar);
 }
 
 /* 读入乘客数据 */
 void ElevatorSystem::readPassengers()
 {
     int no, requestTime, srcFloor, tarFloor;
-    QFile file(":/data/data/passengers.csv");
+    QFile file("./passengers.dat");
     if(!file.open(QIODevice::ReadOnly)){
         qDebug() << "Failed reading passenger data!" << endl;
         file.close();
         return;
     }
     else {
-        qDebug() << "Successed reading passenger data!" << endl;
+        qDebug() << "Succeed reading passenger data!" << endl;
     }
 
     QTextStream *out = new QTextStream(&file);
     QStringList tempOption = out->readAll().split("\n");
     for(int i = 0 ; i < tempOption.count() -1; i++)
     {
-        QStringList dataList = tempOption.at(i).split(",");
+        QStringList dataList = tempOption.at(i).split(" ");
         no = dataList.at(0).toInt();
         requestTime = dataList.at(1).toInt();
         srcFloor = dataList.at(2).toInt();
@@ -125,21 +136,21 @@ void ElevatorSystem::readPassengers()
     file.close();
 }
 
-/* 读取乘客请求 */
+/* 读取乘客请求,检测超出容忍时间乘客 */
 void ElevatorSystem::readInOutRequest()
 {
     /* 获取楼层中乘客请求 */
     for (int floorNo = 0; floorNo < 10; floorNo++) {
         for (PassengerList *cur = outFloorPeople[floorNo]; cur->next != nullptr; cur = cur->next) {
             if (cur->next->requestTime <= SystemTime) {
-                //if (SystemTime - cur->next->requestTime < maxTolerateTime) {
+                if (SystemTime - cur->next->requestTime < maxTolerateTime) {
                     getOutFloorRequest(cur->next->srcFloor, cur->next->tarFloor, cur->next->runStatus);
-                //}
-                ///* 超过最大容忍时间的乘客离开 */
-                //else {
-                //	outputMessage(floorNo, cur->next->peoNo);
-                //	cur->next = cur->next->next;
-                //}
+                }
+                /* 超过最大容忍时间的乘客离开 */
+                else {
+                    outputRunStatus(floorNo, cur->next->peoNo);
+                    cur->next = cur->next->next;
+                }
             }
             else break;
         }
@@ -338,7 +349,7 @@ void ElevatorSystem::changeElevatorStatus(int eleNo)
     }
     /* 空载超时回归基层后，置就绪等待态 */
     else if (elevators[eleNo].nowLoad == 0 && nowFloor == 1 && cur->next->floor == 1 && cur->next->next == nullptr) {
-        elevators[eleNo].elevatorStatus.status = -2;
+        elevators[eleNo].elevatorStatus = { -2, 0 };
         cancelTargetFloor(eleNo, 1);
     }
     /* 其他操作状态 */
@@ -657,29 +668,35 @@ void ElevatorSystem::outputRunStatus(int eleNo, int peoNo)
     QTextStream fout(&file);
     switch (elevators[eleNo].elevatorStatus.status)
     {
+    /* 检测等待超时 */
     case -1:
         qDebug() << "Time:\t" << SystemTime - maxStayTime << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tover wait time" << endl;
         fout << "Time:\t" << SystemTime - maxStayTime << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tover wait time\r\n";
         break;
+    /* 电梯完成开门 */
     case 2:
         qDebug() << "Time:\t" << SystemTime - openTime << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\topen door" << endl;
         fout << "Time:\t" << SystemTime - openTime << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\topen door\r\n";
         break;
+    /* 电梯完成关门 */
     case 3:
         qDebug() << "Time:\t" << SystemTime - closeTime << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tclose door" << endl;
         fout << "Time:\t" << SystemTime - closeTime << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tclose door\r\n";
         break;
+    /* 乘客完成进入 */
     case 4:
         qDebug() << "Time:\t" << SystemTime - 3 << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tpassenger in:\tNo-" << peoNo << endl;
         fout << "Time:\t" << SystemTime - 3 << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tpassenger in:\tNo-" << peoNo << "\r\n";
         break;
+    /* 乘客完成离开 */
     case 5:
         qDebug() << "Time:\t" << SystemTime - 3 << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tpassenger out:\tNo-" << peoNo << endl;
         fout << "Time:\t" << SystemTime - 3 << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tpassenger out:\tNo-" << peoNo <<"\r\n";
         break;
+    /* 超出最大容忍时间 */
     default:
-        qDebug() << "Time:\t" << SystemTime - 3 << " - " << SystemTime << "\tnow floor:\t" << eleNo + 1 << "\tpassenger leave:\tNo-" << peoNo << endl;
-        fout << "Time:\t" << SystemTime - 3 << " - " << SystemTime << "\tnow floor:\t" << eleNo + 1 << "\tpassenger leave:\tNo-" << peoNo << "\r\n";
+        qDebug() << "Time:\t" << SystemTime - maxTolerateTime << " - " << SystemTime << "\tnow floor:\t" << eleNo + 1 << "\tpassenger leave:\tNo-" << peoNo << endl;
+        fout << "Time:\t" << SystemTime - maxTolerateTime << " - " << SystemTime << "\tnow floor:\t" << eleNo + 1 << "\tpassenger leave:\tNo-" << peoNo << "\r\n";
         break;
     }
 
