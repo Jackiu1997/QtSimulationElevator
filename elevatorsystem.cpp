@@ -5,6 +5,7 @@
 #include <QTextStream>
 #include <QDebug>
 
+
 /* 电梯系统初始化 */
 ElevatorSystem::ElevatorSystem()
 {
@@ -46,6 +47,7 @@ void ElevatorSystem::stepRunElevator()
 
         /* 判断电梯操作状态 （运行，开门，关门，进人，出人）*/
         switch (elevators[eleNo].elevatorStatus.status) {
+        case 0: checkOpenDoor(eleNo); break; // 检测开门
         case 1: runElevator(eleNo);	break;   // 运行中
         case 2: openDoor(eleNo); break;		 // 开门中
         case 3: closeDoor(eleNo); break;	 // 关门中
@@ -63,6 +65,7 @@ void ElevatorSystem::stepRunElevator()
     /* 系统时钟自增 */
     SystemTime++;
 }
+
 
 /* UI获取电梯运行状态 */
 ElevatorMessage ElevatorSystem::getElevatorMessage(int eleNo)
@@ -86,10 +89,29 @@ int ElevatorSystem::getFloorPassengerNum(int floorNo) {
 
 /* 乘客逻辑模块 */
 //------------------------------------------------------------------------------------
-/* 添加楼层乘客 */
-void ElevatorSystem::addPassenger(int no, int time, int src, int tar)
+/* 添加电梯乘客 */
+void ElevatorSystem::addElevatorPassenger(int eleNo, int no, int time, int src, int tar) 
 {
-    PassengerList *cur = outFloorPeople[src - 1];
+	/* 加入的乘客时间变为系统时间 */
+
+	PassengerList *cur = elevators[eleNo].inElePeople;
+	for (; cur->next != nullptr; cur = cur->next) {
+		/* 乘客按时间顺序插入 */
+		if (cur->next->requestTime > time) {
+			auto *newNode = new PassengerList(no, SystemTime, src, tar);
+			newNode->next = cur->next;
+			cur->next = newNode;
+			return;
+		}
+	}
+	/* 插入楼层乘客尾部 */
+	cur->next = new PassengerList(no, SystemTime, src, tar);
+}
+
+/* 添加楼层乘客 */
+void ElevatorSystem::addFloorPassenger(int no, int time, int src, int tar) 
+{
+	PassengerList *cur = outFloorPeople[src - 1];
 	for (; cur->next != nullptr; cur = cur->next) {
 		/* 乘客存在，不加入 */
 		if (cur->next->peoNo == no) {
@@ -131,7 +153,7 @@ void ElevatorSystem::readPassengers()
         srcFloor = dataList.at(2).toInt();
         tarFloor = dataList.at(3).toInt();
 
-        addPassenger(no, requestTime, srcFloor, tarFloor);
+        addFloorPassenger(no, requestTime, srcFloor, tarFloor);
     }
     file.close();
 }
@@ -144,13 +166,16 @@ void ElevatorSystem::readInOutRequest()
         for (PassengerList *cur = outFloorPeople[floorNo]; cur->next != nullptr; cur = cur->next) {
             if (cur->next->requestTime <= SystemTime) {
                 if (SystemTime - cur->next->requestTime < maxTolerateTime) {
-                    getOutFloorRequest(cur->next->srcFloor, cur->next->tarFloor, cur->next->runStatus);
-                }
-                /* 超过最大容忍时间的乘客离开 */
-                else {
-                    outputRunStatus(floorNo, cur->next->peoNo);
-                    cur->next = cur->next->next;
-                }
+					getOutFloorRequest(cur->next->srcFloor, cur->next->tarFloor, cur->next->runStatus);
+				}
+				/* 超过最大容忍时间的乘客离开 */
+				else {
+					outputPeopleMessage(floorNo, cur->next->peoNo);
+					cur->next = cur->next->next;
+					if (cur->next == nullptr) {
+						break;
+					}
+				}
             }
             else break;
         }
@@ -335,7 +360,6 @@ void ElevatorSystem::changeElevatorStatus(int eleNo)
     float nowFloor = elevators[eleNo].nowFloor;
 
     TargetFloorList *cur = elevators[eleNo].targetFloor;
-
     /* 就绪等待状态 */
     if (elevators[eleNo].elevatorStatus.status == -2) {
         if (cur->next != nullptr) {
@@ -358,6 +382,8 @@ void ElevatorSystem::changeElevatorStatus(int eleNo)
     }
 
 
+    /* 改变电梯行进状态 */
+
     /* 查询电梯目标楼层情况 */
     for (; cur->next != nullptr; cur = cur->next) {
         if (nowFloor == (float)cur->next->floor) {
@@ -371,7 +397,6 @@ void ElevatorSystem::changeElevatorStatus(int eleNo)
         }
     }
 
-    /* 改变电梯行进状态 */
     /* 到达大楼基层，置1 */
     if (nowFloor == (float)1) {
         elevators[eleNo].runStatus.status = 1;
@@ -380,29 +405,40 @@ void ElevatorSystem::changeElevatorStatus(int eleNo)
     else if (nowFloor == (float)elevators[eleNo].serviceFloors[1]) {
         elevators[eleNo].runStatus.status = -1;
     }
-    /* 上行行均无请求，保持状态 */
-    else if (!upTag && !downTag);
-    /* 电梯行进方向无请求，转向 */
-    else if (!nowTag && !upTag && elevators[eleNo].runStatus.status == 1) {
-        elevators[eleNo].runStatus.status = -1;
+    /* 到达目标楼层 上行行均无请求*/
+    else if (nowTag && !upTag && !downTag) {
+        /* 试探性翻转方向，检测开门 */
+        int status = elevators[eleNo].elevatorStatus.status;
+        if (status == 0 || status == 2) {
+            if (searchPassengerIn(eleNo) == nullptr) {
+                elevators[eleNo].runStatus.status = -elevators[eleNo].runStatus.status;
+            }
+            else if (searchPassengerIn(eleNo) == nullptr) {
+                elevators[eleNo].runStatus.status = -elevators[eleNo].runStatus.status;
+            }
+        }
     }
-    else if (!nowTag && !downTag && elevators[eleNo].runStatus.status == -1) {
-        elevators[eleNo].runStatus.status = 1;
+    /* 到达非目标楼层 */
+    else if (!nowTag) {
+        /* 上行行均无请求 */
+        if (!upTag && !downTag) {
+            elevators[eleNo].elevatorStatus = { -1, 0 };
+        }
+        /* 电梯行进方向无请求，转向 */
+        else if (!upTag && elevators[eleNo].runStatus.status == 1) {
+            elevators[eleNo].runStatus.status = -1;
+        }
+        else if (!downTag && elevators[eleNo].runStatus.status == -1) {
+            elevators[eleNo].runStatus.status = 1;
+        }
     }
 
-    /* 改变电梯操作状态 */
-    switch (elevators[eleNo].elevatorStatus.status) {
-    case 0:
-        if (elevators[eleNo].doorStatus.status == 1) return;
-        else if (nowTag) checkOpenDoor(eleNo);
-        else elevators[eleNo].elevatorStatus = { 1, 0 };
-        break;
-    case 1:
-        if (nowTag) checkOpenDoor(eleNo);
-        else elevators[eleNo].elevatorStatus = { 1, 0 };
-        break;
-    default: break;
-    }
+
+    /* 运行中 改变电梯操作状态 */
+	if (elevators[eleNo].elevatorStatus.status == 1) {
+		if (nowTag) checkOpenDoor(eleNo);
+		else elevators[eleNo].elevatorStatus = { 1, 0 };
+	}
 }
 
 /* 电梯移动 */
@@ -489,15 +525,13 @@ void ElevatorSystem::enterElevator(int eleNo)
         PassengerList *cur = searchPassengerIn(eleNo);
 
         /* 响应进电梯乘客请求 */
-        getInElevatorRequest(eleNo, cur->next->tarFloor);
-        /* 进电梯后加入该乘客,删除楼层中乘客 */
-        PassengerList *temp = elevators[eleNo].inElePeople;
-        for (; temp->next != nullptr; temp = temp->next);
-        temp->next = new PassengerList(cur->next->peoNo, cur->next->requestTime, cur->next->srcFloor, cur->next->tarFloor);
+		getInElevatorRequest(eleNo, cur->next->tarFloor);
+		outputRunStatus(eleNo, cur->next->peoNo);
 
-        outputRunStatus(eleNo, cur->next->peoNo);
-        cur->next = cur->next->next;
-        elevators[eleNo].nowLoad++;
+		/* 进电梯后加入该乘客,删除楼层中乘客 */
+		addElevatorPassenger(eleNo, cur->next->peoNo, cur->next->requestTime, cur->next->srcFloor, cur->next->tarFloor);
+		cur->next = cur->next->next;
+		elevators[eleNo].nowLoad++;
 
         /* 有人进入 */
         if (searchPassengerIn(eleNo) != nullptr) {
@@ -531,7 +565,7 @@ void ElevatorSystem::leaveElevator(int eleNo)
         }
         /* 超出服务楼层离开电梯后加入当前楼层 */
         if (overTag) {
-            addPassenger(cur->next->peoNo, SystemTime, nowFloor, tarFloor);
+            addFloorPassenger(cur->next->peoNo, SystemTime, nowFloor, tarFloor);
         }
 
         outputRunStatus(eleNo, cur->next->peoNo);
@@ -583,20 +617,34 @@ void ElevatorSystem::cancelTargetFloor(int eleNo, int tarFloor)
 /* 检测模块 */
 //------------------------------------------------------------
 /* 检测能否开门模块 */
-void ElevatorSystem::checkOpenDoor(int eleNo) {
-    int nowFloor = (int)elevators[eleNo].nowFloor;
-    int serviceFloors[2] = { elevators[eleNo].serviceFloors[0], elevators[eleNo].serviceFloors[1] };
+void ElevatorSystem::checkOpenDoor(int eleNo) 
+{
+	int nowFloor = (int)elevators[eleNo].nowFloor;
+	int serviceFloors[2] = { elevators[eleNo].serviceFloors[0], elevators[eleNo].serviceFloors[1] };
 
-    /* 处于服务楼层 */
-    if (nowFloor == 1 || nowFloor >= serviceFloors[0] && nowFloor <= serviceFloors[1]) {
-        /* 关门状态 有人进出 */
-        if (elevators[eleNo].doorStatus.status == 0 && searchPassengerOut(eleNo) != nullptr || searchPassengerIn(eleNo) != nullptr) {
-            elevators[eleNo].elevatorStatus = { 2, 0 };
-            return;
-        }
-    }
-    /* 不处于服务楼层 */
-    elevators[eleNo].elevatorStatus = { 1, 0 };
+	/* 开门状态，不开门 */
+	if (elevators[eleNo].doorStatus.status == 1) return;
+	/* 关门状态，检测目标楼层 */
+	else {
+		bool nowTag = false;
+		/* 检测是否为目标楼层 */
+		for (TargetFloorList *cur = elevators[eleNo].targetFloor; cur->next != nullptr; cur = cur->next) {
+			if (nowFloor == (float)cur->next->floor) {
+				nowTag = true;
+				break;
+			}
+		}
+		/* 处于服务楼层 */
+		if (nowTag && (nowFloor == 1 || nowFloor >= serviceFloors[0] && nowFloor <= serviceFloors[1]) ) {
+			/* 有人进出 */
+			if (searchPassengerOut(eleNo) != nullptr || searchPassengerIn(eleNo) != nullptr) {
+				elevators[eleNo].elevatorStatus = { 2, 0 };
+				return;
+			}
+		}
+		/* 不处于服务楼层 */
+		elevators[eleNo].elevatorStatus = { 1, 0 };
+	}
 }
 
 /* 检测能否关门模块 */
@@ -701,4 +749,21 @@ void ElevatorSystem::outputRunStatus(int eleNo, int peoNo)
     }
 
     file.close();
+}
+
+void ElevatorSystem::outputPeopleMessage(int floorNo, int peoNo) 
+{
+	QFile file("./SystemRunStatus.txt");
+    if(!file.open(QIODevice::WriteOnly | QIODevice::Append)){
+        qDebug() << "Failed opening result data！" << endl;
+        file.close();
+        return;
+    }
+
+    QTextStream fout(&file);
+
+    qDebug() << "Time:\t" << SystemTime - maxTolerateTime << " - " << SystemTime << "\tnow floor:\t" << floorNo + 1 << "\tpassenger leave:\tNo-" << peoNo << endl;
+	fout << "Time:\t" << SystemTime - maxTolerateTime << " - " << SystemTime << "\tnow floor:\t" << floorNo + 1 << "\tpassenger leave:\tNo-" << peoNo << endl;
+
+	file.close();
 }

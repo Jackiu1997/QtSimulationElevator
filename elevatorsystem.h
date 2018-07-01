@@ -25,7 +25,8 @@ private:
 
 	/* 乘客逻辑模块 */
 	//------------------------------------------------------------------------------------
-	void addPassenger(int no, int time, int src, int tar);               
+	void addElevatorPassenger(int eleNo, int no, int time, int src, int tar);
+    void addFloorPassenger(int no, int time, int src, int tar);
 	void readPassengers();												// 初始化乘客数据模块
 	void readInOutRequest();											// 内外乘客请求处理
 	void getOutFloorRequest(int srcFloor, int tarFloor, int runStatus); // 读取楼层中乘客请求
@@ -57,6 +58,7 @@ private:
 	/* 结果输出模块 */
 	//------------------------------------------------------------------------------------
     void outputRunStatus(int eleNo, int peoNo);                         // 运行状态导出模块
+	void outputPeopleMessage(int floorNo, int peoNo);
 
 public:
     ElevatorSystem();
