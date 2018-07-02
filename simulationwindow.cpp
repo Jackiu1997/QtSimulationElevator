@@ -45,7 +45,7 @@ void SimulationWindow::addSystemTime()
     updateMessage();
 
     /* 系统时钟自增 */
-    Sleep(200);
+    Sleep(100);
     SystemTime++;
 
     /* 视图更新 */

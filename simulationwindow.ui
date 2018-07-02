@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>795</width>
+    <width>709</width>
     <height>936</height>
    </rect>
   </property>
@@ -78,6 +78,12 @@
    </property>
    <property name="title">
     <string>Elevator 1</string>
+   </property>
+   <property name="flat">
+    <bool>false</bool>
+   </property>
+   <property name="checkable">
+    <bool>false</bool>
    </property>
    <widget class="QLCDNumber" name="lcdFloor1">
     <property name="geometry">

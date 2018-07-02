@@ -13,7 +13,7 @@ ElevatorSystem::ElevatorSystem()
     SystemTime = 0;
     /* 初始化电梯 */
     for (int i = 0; i < 3; i++) {
-        elevators[i] = Elevator(eleDistribution[i], eleDistribution[i + 1]);
+        elevators[i] = Elevator(ELE_DISTRIBUTION[i], ELE_DISTRIBUTION[i + 1]);
     }
     /* 初始化楼层乘客链表 */
     for (int i = 0; i < 10; i++) {
@@ -165,7 +165,7 @@ void ElevatorSystem::readInOutRequest()
     for (int floorNo = 0; floorNo < 10; floorNo++) {
         for (PassengerList *cur = outFloorPeople[floorNo]; cur->next != nullptr; cur = cur->next) {
             if (cur->next->requestTime <= SystemTime) {
-                if (SystemTime - cur->next->requestTime < maxTolerateTime) {
+                if (SystemTime - cur->next->requestTime < MAX_TOLERATE_TIME) {
 					getOutFloorRequest(cur->next->srcFloor, cur->next->tarFloor, cur->next->runStatus);
 				}
 				/* 超过最大容忍时间的乘客离开 */
@@ -272,7 +272,7 @@ void ElevatorSystem::getInElevatorRequest(int eleNo, int tarFloor)
 PassengerList* ElevatorSystem::searchPassengerIn(int eleNo)
 {
     /* 电梯满载时 */
-    if (elevators[eleNo].nowLoad == maxLoad) {
+    if (elevators[eleNo].nowLoad == MAX_LOAD) {
         return nullptr;
     }
 
@@ -456,11 +456,11 @@ void ElevatorSystem::openDoor(int eleNo)
     int gapTime = elevators[eleNo].elevatorStatus.timer;
 
     /* 初始开门 进行开门 */
-    if (!gapTime || gapTime < openTime) {
+    if (!gapTime || gapTime < OPEN_TIME) {
         elevators[eleNo].elevatorStatus.timer++;
     }
     /* 完成开门 */
-    else if (gapTime == openTime) {
+    else if (gapTime == OPEN_TIME) {
         elevators[eleNo].doorStatus = { 1, 0 };
         outputRunStatus(eleNo, 0);
 
@@ -483,7 +483,7 @@ void ElevatorSystem::closeDoor(int eleNo)
     int gapTime = elevators[eleNo].elevatorStatus.timer;
 
     /* 初始关门 进行关门 */
-    if (!gapTime || gapTime < closeTime) {
+    if (!gapTime || gapTime < CLOSE_TIME) {
         elevators[eleNo].elevatorStatus.timer++;
 
         /* 如果关门期间有人进入 */
@@ -494,14 +494,14 @@ void ElevatorSystem::closeDoor(int eleNo)
                 enterElevator(eleNo);
             }
             /* 进行关门中，取消关门，继续开门 */
-            else if (gapTime < closeTime) {
-                elevators[eleNo].elevatorStatus = { 2, openTime - gapTime };
+            else if (gapTime < CLOSE_TIME) {
+                elevators[eleNo].elevatorStatus = { 2, OPEN_TIME - gapTime };
                 openDoor(eleNo);
             }
         }
     }
     /* 完成关门 */
-    else if (gapTime == closeTime) {
+    else if (gapTime == CLOSE_TIME) {
         elevators[eleNo].doorStatus = { 0, 0 };
         outputRunStatus(eleNo, 0);
 
@@ -517,11 +517,11 @@ void ElevatorSystem::enterElevator(int eleNo)
     int gapTime = elevators[eleNo].elevatorStatus.timer;
 
     /* 初始化乘客进入电梯 进行乘客进入电梯 */
-    if (!gapTime || gapTime < 3) {
+    if (!gapTime || gapTime < INOUT_TIME) {
         elevators[eleNo].elevatorStatus.timer++;
     }
     /* 完成乘客进入电梯 */
-    else if (gapTime == 3) {
+    else if (gapTime == INOUT_TIME) {
         PassengerList *cur = searchPassengerIn(eleNo);
 
         /* 响应进电梯乘客请求 */
@@ -549,11 +549,11 @@ void ElevatorSystem::leaveElevator(int eleNo)
     int gapTime = elevators[eleNo].elevatorStatus.timer;
 
     /* 初始化乘客离开电梯 进行乘客离开电梯 */
-    if (!gapTime || gapTime < 3) {
+    if (!gapTime || gapTime < INOUT_TIME) {
         elevators[eleNo].elevatorStatus.timer++;
     }
     /* 完成乘客离开电梯 */
-    else if (gapTime == 3) {
+    else if (gapTime == INOUT_TIME) {
         PassengerList *cur = searchPassengerOut(eleNo);
         int nowFloor = (int)elevators[eleNo].nowFloor, tarFloor = cur->next->tarFloor;
         int serviceFloors[2] = { elevators[eleNo].serviceFloors[0], elevators[eleNo].serviceFloors[1] };
@@ -653,7 +653,7 @@ void ElevatorSystem::checkCloseDoor(int eleNo)
     int stayTimer = elevators[eleNo].doorStatus.timer;
 
     /* 检测计时初始化 检测计时进行中*/
-    if (!stayTimer || stayTimer < checkTime) {
+    if (!stayTimer || stayTimer < CHECK_TIME) {
         elevators[eleNo].doorStatus.timer++;
 
         /* 如果出人进人中，跳过 */
@@ -665,7 +665,7 @@ void ElevatorSystem::checkCloseDoor(int eleNo)
         }
     }
     /* 到达检测周期，完成检测 */
-    else if (stayTimer == checkTime) {
+    else if (stayTimer == CHECK_TIME) {
         /* 如果出人进入中，重置计时 */
         if (elevators[eleNo].elevatorStatus.status == 5 || elevators[eleNo].elevatorStatus.status == 4) {
             elevators[eleNo].doorStatus.timer = 0;
@@ -693,11 +693,11 @@ void ElevatorSystem::checkOverWait(int eleNo)
     int waitTimer = elevators[eleNo].elevatorStatus.timer;
 
     /* 初始化等待计时 进行等待计时 */
-    if (!waitTimer || waitTimer < maxStayTime) {
+    if (!waitTimer || waitTimer < MAX_STAY_TIME) {
         elevators[eleNo].elevatorStatus.timer++;
     }
     /* 完成等待计时 */
-    else if (waitTimer == maxStayTime) {
+    else if (waitTimer == MAX_STAY_TIME) {
         outputRunStatus(eleNo, 0);
         allocTargetFloor(eleNo, 1);
         elevators[eleNo].elevatorStatus = { 1, 0 };
@@ -718,34 +718,31 @@ void ElevatorSystem::outputRunStatus(int eleNo, int peoNo)
     {
     /* 检测等待超时 */
     case -1:
-        qDebug() << "Time:\t" << SystemTime - maxStayTime << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tover wait time" << endl;
-        fout << "Time:\t" << SystemTime - maxStayTime << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tover wait time\r\n";
+        qDebug() << "Time:\t" << SystemTime - MAX_STAY_TIME << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tover wait time" << endl;
+        fout << "Time:\t" << SystemTime - MAX_STAY_TIME << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tover wait time\r\n";
         break;
     /* 电梯完成开门 */
     case 2:
-        qDebug() << "Time:\t" << SystemTime - openTime << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\topen door" << endl;
-        fout << "Time:\t" << SystemTime - openTime << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\topen door\r\n";
+        qDebug() << "Time:\t" << SystemTime - OPEN_TIME << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\topen door" << endl;
+        fout << "Time:\t" << SystemTime - OPEN_TIME << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\topen door\r\n";
         break;
     /* 电梯完成关门 */
     case 3:
-        qDebug() << "Time:\t" << SystemTime - closeTime << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tclose door" << endl;
-        fout << "Time:\t" << SystemTime - closeTime << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tclose door\r\n";
+        qDebug() << "Time:\t" << SystemTime - CLOSE_TIME << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tclose door" << endl;
+        fout << "Time:\t" << SystemTime - CLOSE_TIME << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tclose door\r\n";
         break;
     /* 乘客完成进入 */
     case 4:
-        qDebug() << "Time:\t" << SystemTime - 3 << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tpassenger in:\tNo-" << peoNo << endl;
-        fout << "Time:\t" << SystemTime - 3 << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tpassenger in:\tNo-" << peoNo << "\r\n";
+        qDebug() << "Time:\t" << SystemTime - INOUT_TIME << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tpassenger in:\tNo-" << peoNo << endl;
+        fout << "Time:\t" << SystemTime - INOUT_TIME << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tpassenger in:\tNo-" << peoNo << "\r\n";
         break;
     /* 乘客完成离开 */
     case 5:
-        qDebug() << "Time:\t" << SystemTime - 3 << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tpassenger out:\tNo-" << peoNo << endl;
-        fout << "Time:\t" << SystemTime - 3 << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tpassenger out:\tNo-" << peoNo <<"\r\n";
+        qDebug() << "Time:\t" << SystemTime - INOUT_TIME << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tpassenger out:\tNo-" << peoNo << endl;
+        fout << "Time:\t" << SystemTime - INOUT_TIME << " - " << SystemTime << "\t\t\teleNo:\t" << eleNo + 1 << "\tnow floor:\t" << elevators[eleNo].nowFloor << "\tpassenger out:\tNo-" << peoNo <<"\r\n";
         break;
     /* 超出最大容忍时间 */
-    default:
-        qDebug() << "Time:\t" << SystemTime - maxTolerateTime << " - " << SystemTime << "\tnow floor:\t" << eleNo + 1 << "\tpassenger leave:\tNo-" << peoNo << endl;
-        fout << "Time:\t" << SystemTime - maxTolerateTime << " - " << SystemTime << "\tnow floor:\t" << eleNo + 1 << "\tpassenger leave:\tNo-" << peoNo << "\r\n";
-        break;
+    default: break;
     }
 
     file.close();
@@ -762,8 +759,8 @@ void ElevatorSystem::outputPeopleMessage(int floorNo, int peoNo)
 
     QTextStream fout(&file);
 
-    qDebug() << "Time:\t" << SystemTime - maxTolerateTime << " - " << SystemTime << "\tnow floor:\t" << floorNo + 1 << "\tpassenger leave:\tNo-" << peoNo << endl;
-	fout << "Time:\t" << SystemTime - maxTolerateTime << " - " << SystemTime << "\tnow floor:\t" << floorNo + 1 << "\tpassenger leave:\tNo-" << peoNo << endl;
+    qDebug() << "Time:\t" << SystemTime - MAX_TOLERATE_TIME << " - " << SystemTime << "\t\t\tnow floor:\t" << floorNo + 1 << "\tpassenger leave:\tNo-" << peoNo << endl;
+    fout << "Time:\t" << SystemTime - MAX_TOLERATE_TIME << " - " << SystemTime << "\t\t\tnow floor:\t" << floorNo + 1 << "\tpassenger leave:\tNo-" << peoNo <<"\r\n";
 
 	file.close();
 }

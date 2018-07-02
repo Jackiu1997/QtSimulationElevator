@@ -9,15 +9,16 @@ private:
     /* 电梯系统参数 */
 	//------------------------------------------------------------------------------------
     int SystemTime;
-    static const int maxLoad = 12;									    // 电梯最大负载
-    static constexpr int eleDistribution[4] = {1,4,7,10};               // 电梯群服务楼层
+    static const int MAX_LOAD = 9;									    // 电梯最大负载
+	static constexpr int ELE_DISTRIBUTION[4] = {1,4,7,10};              // 电梯群服务楼层
 	/* main time */
-    static const int runTime = 2;										// 电梯移动时间
-    static const int openTime = 2;										// 电梯开门时间
-    static const int closeTime = 2;										// 电梯关门时间
-    static const int checkTime = 4;										// 检测关门周期
-    static const int maxStayTime = 30;									// 电梯最大停留时间
-	static const int maxTolerateTime = 180;								// 乘客最大容忍时间
+    static const int RUN_TIME = 2;										// 电梯移动时间
+    static const int OPEN_TIME = 2;										// 电梯开门时间
+    static const int CLOSE_TIME = 2;									// 电梯关门时间
+	static const int INOUT_TIME = 3;									// 乘客进出时间
+    static const int CHECK_TIME = 4;									// 检测关门周期
+    static const int MAX_STAY_TIME = 30;								// 电梯最大停留时间
+	static const int MAX_TOLERATE_TIME = 180;							// 乘客最大容忍时间
 	/* main data */
 	Elevator elevators[3];												// 电梯数据数组
 	PassengerList *outFloorPeople[10];									// 楼层乘客链表
