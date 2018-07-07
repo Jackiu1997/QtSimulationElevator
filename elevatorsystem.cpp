@@ -133,7 +133,7 @@ void ElevatorSystem::addFloorPassenger(int no, int time, int src, int tar)
 void ElevatorSystem::readPassengers()
 {
     int no, requestTime, srcFloor, tarFloor;
-    QFile file("./passengers.dat");
+    QFile file(":/data/data/passengers.dat");
     if(!file.open(QIODevice::ReadOnly)){
         qDebug() << "Failed reading passenger data!" << endl;
         file.close();
@@ -194,7 +194,7 @@ void ElevatorSystem::getOutFloorRequest(int srcFloor, int tarFloor, int runStatu
     int eleNo = 0, tag = 0;
     for (; eleNo < 3; eleNo++) {
         int serviceFloors[2] = { elevators[eleNo].serviceFloors[0], elevators[eleNo].serviceFloors[1] };
-        /* 交汇区 */
+        /* 一楼 直接检测目标是否为服务楼层 */
         if (srcFloor == 1 && tarFloor >= serviceFloors[0] && tarFloor <= serviceFloors[1]) {
             break;
         }
@@ -253,18 +253,22 @@ void ElevatorSystem::getOutFloorRequest(int srcFloor, int tarFloor, int runStatu
 void ElevatorSystem::getInElevatorRequest(int eleNo, int tarFloor)
 {
     int tar = 0;
+    /* 目标为一楼直接分配 */
     if (tarFloor == 1) {
         tar = 1;
     }
+    /* 小于服务楼层，到服务楼层底层 */
     else if (tarFloor < elevators[eleNo].serviceFloors[0]) {
         tar = elevators[eleNo].serviceFloors[0];
     }
+    /* 大于服务楼层，到服务楼层顶层 */
     else if (tarFloor > elevators[eleNo].serviceFloors[1]) {
         tar = elevators[eleNo].serviceFloors[1];
     }
     else {
         tar = tarFloor;
     }
+    /* 分配目标楼层 */
     allocTargetFloor(eleNo, tar);
 }
 
@@ -285,7 +289,7 @@ PassengerList* ElevatorSystem::searchPassengerIn(int eleNo)
         if (cur->next->requestTime > SystemTime) {
             return nullptr;
         }
-        /* 运行方向相同 */
+        /* 乘客与电梯运行方向相同，才可进入电梯 */
         else if (cur->next->runStatus == elevators[eleNo].runStatus.status) {
             /* 交汇区 */
             if (nowFloor == 1) {
@@ -359,6 +363,7 @@ void ElevatorSystem::changeElevatorStatus(int eleNo)
     bool downTag = false, upTag = false, nowTag = false;
     float nowFloor = elevators[eleNo].nowFloor;
 
+    /* 就绪与无请求状态的处理 */
     TargetFloorList *cur = elevators[eleNo].targetFloor;
     /* 就绪等待状态 */
     if (elevators[eleNo].elevatorStatus.status == -2) {
@@ -433,12 +438,10 @@ void ElevatorSystem::changeElevatorStatus(int eleNo)
         }
     }
 
-
-    /* 运行中 改变电梯操作状态 */
-	if (elevators[eleNo].elevatorStatus.status == 1) {
-		if (nowTag) checkOpenDoor(eleNo);
-		else elevators[eleNo].elevatorStatus = { 1, 0 };
-	}
+    /* 电梯移动到目标楼层，检测是否开门 */
+    if (nowTag && elevators[eleNo].elevatorStatus.status == 1) {
+        checkOpenDoor(eleNo);
+    }
 }
 
 /* 电梯移动 */

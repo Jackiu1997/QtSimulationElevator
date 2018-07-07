@@ -56,7 +56,7 @@ struct Elevator {
 	Elevator(int down, int up);
 };
 
-/* 电梯信息结构题 */
+/* 电梯信息结构题体 */
 //--------------------------------------------------------------
 struct ElevatorMessage {
     float nowFloor;

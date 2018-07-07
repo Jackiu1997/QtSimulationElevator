@@ -11,5 +11,7 @@
         <file>res/end.png</file>
         <file>res/pause.png</file>
     </qresource>
-    <qresource prefix="/data"/>
+    <qresource prefix="/data">
+        <file>data/passengers.dat</file>
+    </qresource>
 </RCC>

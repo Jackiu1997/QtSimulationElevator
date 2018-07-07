@@ -9,7 +9,7 @@ private:
     /* 电梯系统参数 */
 	//------------------------------------------------------------------------------------
     int SystemTime;
-    static const int MAX_LOAD = 9;									    // 电梯最大负载
+    static const int MAX_LOAD = 10;									    // 电梯最大负载
 	static constexpr int ELE_DISTRIBUTION[4] = {1,4,7,10};              // 电梯群服务楼层
 	/* main time */
     static const int RUN_TIME = 2;										// 电梯移动时间
