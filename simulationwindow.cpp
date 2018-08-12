@@ -23,7 +23,7 @@ SimulationWindow::SimulationWindow(QWidget *parent) :
     this->setMinimumSize(700, 920);
     this->setMaximumSize(700, 920);
     this->setWindowTitle("Simulation Elevator");
-    this->setWindowIcon(QIcon(":/figure/res/icon.png"));
+    this->setWindowIcon(QIcon(":/figure/res/icon.ico"));
     this->setAttribute(Qt::WA_StyledBackground,true);
     this->setStyleSheet("background-color: rgb(255, 255, 255)");
 

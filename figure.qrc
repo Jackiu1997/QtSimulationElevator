@@ -6,10 +6,10 @@
         <file>res/passengerin.png</file>
         <file>res/passengerout.png</file>
         <file>res/building.png</file>
-        <file>res/icon.png</file>
         <file>res/continue.png</file>
         <file>res/end.png</file>
         <file>res/pause.png</file>
+        <file>res/icon.ico</file>
     </qresource>
     <qresource prefix="/data">
         <file>data/passengers.dat</file>
